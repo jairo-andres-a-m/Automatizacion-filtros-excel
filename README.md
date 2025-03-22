@@ -9,7 +9,7 @@ Consiste en una ventana hecha con el modulo tkinter en la cual se ingresa un tex
 La aplicacion se conecta a un Excel usando el modulo xlwings. Al hacer clic en filtrar, la aplicacion extrae los datos relevante del texto y aplica el filtro en Excel, esto para facilitar la aplicacion manual de cambios y minimizar errores. 
 
 Ejemplo de los "documentos oficiales" en PDF:  
-![image](https://github.com/user-attachments/assets/5b77698a-922d-485e-8269-97c4068e6cce)
+![image](https://github.com/user-attachments/assets/1d4d55bc-728d-45a2-8169-d89381571b8a)
   
 Ejemplo de la base en Excel filtrada:  
 ![image](https://github.com/user-attachments/assets/d0f4ef55-40d4-4d40-90c1-83827938f001)
