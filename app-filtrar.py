@@ -1,20 +1,25 @@
+import os
+#Tamaño del terminal cuando sea visible
+os.system("mode con: cols=49 lines=24")
+
 import xlwings as xlw
 import pandas as pd
 import datetime as dt
 import tkinter as tk
 import re
+import pygetwindow
 
 
-EXCEL = r"C:\Users\PC\Proy-Codigo\filtrar\app_filtrar\Base Suministros SIDAE FEB desktop.xlsx"
+EXCEL = r"\\192.168.10.132\sb_psb_010_020$\Alimentos Comedores\Administrativo\Administrativo Compartido\REPORTES\8. FACTURACION\2024 CV 6977745\9. JULIO 2025\3. SIDAE\Base Suministros JULIO semana 7-13 SIDAE.xlsx"
 PESTAÑA = "M-GI-06"
 
-COLEGIO_COLS = ['Id Sitio Entrega', 'Nombre Institución Educativa', 'Sitio de Entrega', 'Codigo_Dane_Sede']
+COLEGIO_COLS = ['Id Sitio Entrega', 'Nombre Institución Educativa', 'Sitio de Entrega']
 FILTRO_COLS = ['Id Sitio Entrega', 'FECHA']
-
 
 class ConexionExcel():
     def __init__(self, excel, pestaña):
-        self.ws = xlw.Book(excel).sheets[pestaña]
+        self.wb = xlw.Book(excel)
+        self.ws = self.wb.sheets[pestaña]
         try:
             self.ws.api.ShowAllData()
             print("Rango desfiltrado.")
@@ -63,7 +68,8 @@ class App():
 
         self.mi_excel = excel
         self.app = tk.Tk()
-        self.app.title("( :")
+        self.app.title("( :     -     jul")
+
 
         self.var_filtrar = tk.IntVar(self.app)
         self.var_dias = tk.StringVar(self.app, "deldia")
@@ -80,6 +86,8 @@ class App():
                                     indicator=0,
                                     width= 7,
                                     command=self.check_filtrar)
+
+
         
         self.favanzadoButton = tk.Checkbutton(self.app,
                                            text="avanzado",
@@ -108,9 +116,7 @@ class App():
         self.radioButton_apartir.pack(side = "right", padx = 5, pady = 1)
         self.radioButton_deldia.pack(side = "right", padx = 5, pady = 1)
 
-
-
-    
+   
     def check_filtrar(self):
 
         texto = self.textEntry.get("1.0",'end-1c')
@@ -122,13 +128,15 @@ class App():
         if self.var_filtrar.get() == 1:
             
             print("")
+            ahora = dt.datetime.now()
+            print(ahora.strftime("%I:%M %S %p"))
             print("             filt  exc     dias")
             print("comandos   | ",self.var_filtrar.get()," | ",f"{self.var_exacto.get()}"," | ", self.var_dias.get(), " |")
             print(colegio)
             print("ids:     ", ids)
             print("fechas:  ", fechas)
-            print("filas:    ")
-            for fila in filas:
+            print(f"filas:    {filas[0]}")
+            for fila in filas[1:]:
                 print("         ",fila)  
 
             if self.var_exacto.get() == 1:              #filtro nuevo, "exacto"
@@ -198,17 +206,13 @@ class App():
 
         return filas
 
-
-
-
-
    
 
-
-
 mi_excel = ConexionExcel(EXCEL, PESTAÑA)
-
 app = App(mi_excel)
 
+#Asignacion de la tecla <F9> a la accion del boton de filtrar
+app.textEntry.focus_set()
+app.textEntry.bind("<F9>", lambda event: app.filterButton.invoke())
 
 tk.mainloop()
