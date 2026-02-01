@@ -1,5 +1,5 @@
 import os
-#Tamaño del terminal cuando sea visible
+#Tamaño del terminal
 os.system("mode con: cols=49 lines=24")
 
 import xlwings as xlw
@@ -10,7 +10,7 @@ import re
 import pygetwindow
 
 
-EXCEL = r"\\192.168.10.132\sb_psb_010_020$\Alimentos Comedores\Administrativo\Administrativo Compartido\REPORTES\8. FACTURACION\2024 CV 6977745\9. JULIO 2025\3. SIDAE\Base Suministros JULIO semana 7-13 SIDAE.xlsx"
+EXCEL = r"C:\Users\PC\Desktop\Base Suministros SIDAE SEPT.xlsx"
 PESTAÑA = "M-GI-06"
 
 COLEGIO_COLS = ['Id Sitio Entrega', 'Nombre Institución Educativa', 'Sitio de Entrega']
@@ -39,7 +39,9 @@ class ConexionExcel():
     def filtrar_fechas(self, fechas):
         self.ws.range("A1").api.AutoFilter(Field=47, Criteria2=fechas, Operator=7)      # filtra las fechas
 
-        	
+    def desfiltrar_fechas(self):
+        self.ws.range("A1").api.AutoFilter(Field=47, Operator=7)                        # desfiltra las fechas
+	
     
     def filtrar_avanzado(self, filas, var_dias):
         rows = len(filas)
@@ -57,9 +59,20 @@ class ConexionExcel():
         else:
             print("\nEspacio de referencia ocupado, revisar.")
             self.n_filas = self.ws.range("D1").end("down").row
+    
+    def filtrarnofindes(self):
+        sin_findes = ['LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES']
+        self.ws.range("A1").api.AutoFilter(Field=48, Criteria1=sin_findes, Operator=7)
+        print("NoFindes filtrados")
+
+    def desfiltrarnofindes(self):
+        self.ws.range("A1").api.AutoFilter(Field=48, Operator=7)
+        print("NoFindes desfiltrados")
 
     def desfiltrar(self):
         self.ws.api.ShowAllData()
+
+
 
 
 
@@ -68,95 +81,143 @@ class App():
 
         self.mi_excel = excel
         self.app = tk.Tk()
-        self.app.title("( :     -     jul")
+        self.app.title("( :     -     ")
+
+        #FRAME DE ARRIBA controles principales ----------------------------------------------------
+        self.frame1 = tk.Frame(self.app)
+        self.frame1.pack()
 
 
-        self.var_filtrar = tk.IntVar(self.app)
+        #self.var_filtrar = tk.IntVar(self.app)
         self.var_dias = tk.StringVar(self.app, "deldia")
         self.var_exacto = tk.IntVar(self.app)
+        self.var_finde = tk.IntVar(self.app)
 
 
-        self.textEntry = tk.Text(self.app, height=6, width =46)
+        self.textEntry = tk.Text(self.frame1, height=6, width =48)
 
-        self.filterButton = tk.Checkbutton(self.app,
+        self.filterButton = tk.Button(self.frame1,
                                     text="filtrar",
-                                    variable= self.var_filtrar,
-                                    onvalue=  self.var_filtrar.set(value=1),
-                                    offvalue= self.var_filtrar.set(value=0),
-                                    indicator=0,
                                     width= 7,
                                     command=self.check_filtrar)
 
-
         
-        self.favanzadoButton = tk.Checkbutton(self.app,
+        self.favanzadoButton = tk.Button(self.frame1,
                                            text="avanzado",
-                                           variable=self.var_exacto,
-                                           onvalue=self.var_exacto.set(value=1),
-                                           offvalue=self.var_exacto.set(value=0),
+                                           width= 7,
+                                           command=self.check_filtrar_exacto,
                                            font=("Arial", 6),
-                                           bd=2)
+                                           padx=1)
+        
+        
+        self.ffindeButton = tk.Checkbutton(self.frame1,
+                                    text="finde",
+                                    width= 5,
+                                    highlightthickness=0,
+                                    command=self.check_findes,
+                                    variable= self.var_finde,
+                                    onvalue=  self.var_finde.set(value=1),
+                                    offvalue= self.var_finde.set(value=0),
+                                    font=("Arial", 6),
+                                    pady=2,
+                                    indicator=0)
 
 
-        self.radioButton_deldia = tk.Radiobutton(self.app,
+        self.radioButton_deldia = tk.Radiobutton(self.frame1,
                                                 text="del día",
                                                 variable= self.var_dias,
                                                 value=  "deldia",
                                                 font=("Arial", 8))
-        self.radioButton_apartir =tk.Radiobutton(self.app,
+        self.radioButton_apartir =tk.Radiobutton(self.frame1,
                                                 text="a partir de",
                                                 variable= self.var_dias,
                                                 value= "apartir",                             
                                                 font=("Arial", 8))
+        
+
 
 
         self.textEntry.pack()
-        self.filterButton.pack(side = "left", padx = 30, pady = 1, fill="x")
-        self.favanzadoButton.pack(side = "left", padx = 0, pady = 1)
+        self.filterButton.pack(side = "left", padx = 7, pady = 1, fill=tk.BOTH)
+        self.favanzadoButton.pack(side = "left", padx = 7, pady = 1, fill=tk.BOTH)
+        self.ffindeButton.pack(side = "left", padx = 37, pady = 1)
+        
         self.radioButton_apartir.pack(side = "right", padx = 5, pady = 1)
         self.radioButton_deldia.pack(side = "right", padx = 5, pady = 1)
 
-   
+        
+        #FRAME DE ABAJO controles adicionales -----------------------------------------------------
+        # self.frame2 = tk.Frame(self.app, bg="white", width=46).grid_propagate(0)    #fondo blanco para diferenciar del frame de arriba
+        # # self.frame2.pack()
+
+
+        
+
+   #CHECKEO PARAMETROS para filtrar ---------------------------------------------------------------
+
+
     def check_filtrar(self):
 
+        ids,colegio,fechas,filas = self.extraer_datos()
+
+        #filtro antiguo
+        if self.var_dias.get() == "deldia":
+            self.mi_excel.filtrar_colegio_e_ids(colegio, ids)
+            self.mi_excel.filtrar_fechas(fechas)
+                
+        elif self.var_dias.get() == "apartir":
+            self.mi_excel.filtrar_colegio_e_ids(colegio, ids)
+            self.mi_excel.desfiltrar_fechas()
+
+
+    def check_filtrar_exacto(self):
+        
+        ids,colegio,fechas,filas = self.extraer_datos()
+
+        #filtro nuevo, "exacto"
+        if self.var_dias.get() == "deldia":
+            self.mi_excel.filtrar_avanzado(filas, self.var_dias.get())
+        elif self.var_dias.get() == "apartir":
+            self.mi_excel.filtrar_avanzado(filas, self.var_dias.get())
+
+
+    def check_findes(self):
+        if self.var_finde.get() == 1:
+            self.mi_excel.filtrarnofindes()
+        elif self.var_finde.get() == 0:
+            self.mi_excel.desfiltrarnofindes()
+
+
+    def extraer_datos(self):
         texto = self.textEntry.get("1.0",'end-1c')
         ids = self.extraer_ids(texto)
         colegio = self.extraer_colegio(texto, ids)
         fechas = self.extraer_fechas(texto)
         filas = self.extraer_filas(texto)
+
+        #Imprimir Parametros
+        print("")
+        ahora = dt.datetime.now()
+        print(ahora.strftime("%I:%M %S %p"))
+        print("             filt  exc     dias")
+        print("comandos   | ", "-", " | ",f"{self.var_exacto.get()}"," | ", self.var_dias.get(), " |")
+        print(colegio)
+        print("ids:     ", ids)
+        print("fechas:  ", fechas)
+        print(f"filas:    {filas[0]}")
+        for fila in filas[1:]:
+            print("         ",fila) 
         
-        if self.var_filtrar.get() == 1:
-            
-            print("")
-            ahora = dt.datetime.now()
-            print(ahora.strftime("%I:%M %S %p"))
-            print("             filt  exc     dias")
-            print("comandos   | ",self.var_filtrar.get()," | ",f"{self.var_exacto.get()}"," | ", self.var_dias.get(), " |")
-            print(colegio)
-            print("ids:     ", ids)
-            print("fechas:  ", fechas)
-            print(f"filas:    {filas[0]}")
-            for fila in filas[1:]:
-                print("         ",fila)  
+        return ids,colegio,fechas,filas
 
-            if self.var_exacto.get() == 1:              #filtro nuevo, "exacto"
-                if self.var_dias.get() == "deldia":
-                    self.mi_excel.filtrar_avanzado(filas, self.var_dias.get())
-                else:
-                    self.mi_excel.filtrar_avanzado(filas, self.var_dias.get())
 
-            elif self.var_exacto.get() == 0:            #filtro antiguo
-                if self.var_dias.get() == "deldia":
-                    self.mi_excel.filtrar_colegio_e_ids(colegio, ids)
-                    self.mi_excel.filtrar_fechas(fechas)
-                    
-                else:
-                    self.mi_excel.filtrar_colegio_e_ids(colegio, ids)
+
+
+
+
         
-        elif self.var_filtrar.get() == 0:
-            self.mi_excel.desfiltrar()
 
-
+    #UTILIDADES app -------------------------------------------------------------------------------
 
     def extraer_ids(self, texto):
         patron_ids = r"\d{5}"
@@ -196,12 +257,14 @@ class App():
         filas = []
         for fila in texto.split("\n"):
             # print(fila)
-            id = re.search(patron_ids, fila)
-            id = id.group()
-            fecha = re.search(patron_fechas, fila)
-            fecha = "'"+fecha.group()               #Se les pone una comilla simple para que al escribirlas en excel queden como texto
-            # print(id, fecha)
-            filas.append([id, fecha])
+            if fila != "":
+                id = re.search(patron_ids, fila)
+                id = id.group()
+                fecha = re.search(patron_fechas, fila)
+                fecha = "'"+fecha.group()               #Se les pone una comilla simple para que al escribirlas en excel queden como texto
+                # print(id, fecha)
+                filas.append([id, fecha])
+
         # print(filas)
 
         return filas
@@ -211,7 +274,7 @@ class App():
 mi_excel = ConexionExcel(EXCEL, PESTAÑA)
 app = App(mi_excel)
 
-#Asignacion de la tecla <F9> a la accion del boton de filtrar
+#nuevo
 app.textEntry.focus_set()
 app.textEntry.bind("<F9>", lambda event: app.filterButton.invoke())
 
