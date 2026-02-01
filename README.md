@@ -1,10 +1,11 @@
 # Automatizacion-filtros-excel 👨‍💻📃
   
-Esta es una aplicacion hecha en Python, que ayuda a filtrar informacion de una "base de datos" de colegios. Filtra por Colegio, Id y Fechas para facilitar la aplicacion de modificaciones en las cantidades de suministros.
+Esta es una aplicacion hecha en Python, que ayuda a filtrar informacion de una "base de datos" de colegios. Filtra por Colegio, Id y Fechas para facilitar la aplicacion de modificaciones en las cantidades de suministros. Permite configurar si se filtra un dia o todos los dias del mes y además permite filtrar y desfiltrar los dias de entre semana.
 
 Consiste en una ventana hecha con el modulo tkinter en la cual se ingresa un texto extraido de un PDF, el cual es un "documento oficial".  
   
-![image](https://github.com/user-attachments/assets/df5ab186-6bf4-40b0-8f1f-c5c31d134d54)  
+ <img width="419" height="179" alt="image" src="https://github.com/user-attachments/assets/16de2d3f-970a-4fc9-9a15-dc3157400fed" />
+
   
 La aplicacion se conecta a un Excel usando el modulo xlwings. Al hacer clic en filtrar, o usando la tecla <F9> (tecla asignada a esta accion para mayor facilidad en un proceso repetitivo), la aplicacion extrae los datos relevantes del texto y aplica el filtro a nuestro Excel. De esta manera se facilita la aplicacion manual de muchos cambios y se minimizan errores. 
 
