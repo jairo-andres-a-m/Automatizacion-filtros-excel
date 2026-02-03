@@ -7,7 +7,6 @@ import pandas as pd
 import datetime as dt
 import tkinter as tk
 import re
-import pygetwindow
 
 
 EXCEL = r"C:\Users\PC\Desktop\Base Suministros SIDAE SEPT.xlsx"
@@ -83,6 +82,10 @@ class App():
         self.app = tk.Tk()
         self.app.title("( :     -     ")
 
+        self.app.attributes('-topmost', True)
+        self.app.attributes('-alpha', 0.85)
+
+
         #FRAME DE ARRIBA controles principales ----------------------------------------------------
         self.frame1 = tk.Frame(self.app)
         self.frame1.pack()
@@ -94,7 +97,7 @@ class App():
         self.var_finde = tk.IntVar(self.app)
 
 
-        self.textEntry = tk.Text(self.frame1, height=6, width =48)
+        self.textEntry = tk.Text(self.frame1, height=6, width =46)
 
         self.filterButton = tk.Button(self.frame1,
                                     text="filtrar",
@@ -110,17 +113,17 @@ class App():
                                            padx=1)
         
         
-        self.ffindeButton = tk.Checkbutton(self.frame1,
+        self.ffindeButton = tk.Button(self.frame1,
                                     text="finde",
                                     width= 5,
                                     highlightthickness=0,
                                     command=self.check_findes,
-                                    variable= self.var_finde,
-                                    onvalue=  self.var_finde.set(value=1),
-                                    offvalue= self.var_finde.set(value=0),
+                                    # variable= self.var_finde,
+                                    # onvalue=  self.var_finde.set(value=1),
+                                    # offvalue= self.var_finde.set(value=0),
                                     font=("Arial", 6),
-                                    pady=2,
-                                    indicator=0)
+                                    pady=2)
+                                    # indicator=0)
 
 
         self.radioButton_deldia = tk.Radiobutton(self.frame1,
@@ -138,12 +141,12 @@ class App():
 
 
         self.textEntry.pack()
-        self.filterButton.pack(side = "left", padx = 7, pady = 1, fill=tk.BOTH)
-        self.favanzadoButton.pack(side = "left", padx = 7, pady = 1, fill=tk.BOTH)
-        self.ffindeButton.pack(side = "left", padx = 37, pady = 1)
-        
+        self.filterButton.pack(side = "left", padx = 6, pady = 1, fill=tk.BOTH)
+        self.favanzadoButton.pack(side = "left", padx = 6, pady = 1, fill=tk.BOTH)
+        self.ffindeButton.pack(side = "left", padx = 28, pady = 1)
         self.radioButton_apartir.pack(side = "right", padx = 5, pady = 1)
         self.radioButton_deldia.pack(side = "right", padx = 5, pady = 1)
+
 
         
         #FRAME DE ABAJO controles adicionales -----------------------------------------------------
@@ -151,7 +154,20 @@ class App():
         # # self.frame2.pack()
 
 
-        
+    #fade in de la transparencia para cuando se enfoca la ventana
+    def on_focus_fade_in(self, event, target_alpha=0.90):
+        current_alpha = self.app.attributes('-alpha')
+        if current_alpha < target_alpha:
+            current_alpha += 0.05  # Velocidad del desvanecido
+            self.app.attributes('-alpha', current_alpha)
+            # Se llama a sí mismo después de 10ms
+            self.app.after(10, lambda: self.on_focus_fade_in(target_alpha))
+
+    #transparencia para cuando se desenfoca la ventana
+    def on_focus_out(self, event):
+        self.app.attributes('-alpha', 0.47)
+
+    
 
    #CHECKEO PARAMETROS para filtrar ---------------------------------------------------------------
 
@@ -182,10 +198,13 @@ class App():
 
 
     def check_findes(self):
-        if self.var_finde.get() == 1:
+        v = self.var_finde.get()
+        if v == 0:
             self.mi_excel.filtrarnofindes()
-        elif self.var_finde.get() == 0:
+            self.var_finde.set(1)
+        elif self.var_finde.get() == 1:
             self.mi_excel.desfiltrarnofindes()
+            self.var_finde.set(0)
 
 
     def extraer_datos(self):
@@ -209,11 +228,6 @@ class App():
             print("         ",fila) 
         
         return ids,colegio,fechas,filas
-
-
-
-
-
 
         
 
@@ -274,8 +288,16 @@ class App():
 mi_excel = ConexionExcel(EXCEL, PESTAÑA)
 app = App(mi_excel)
 
-#nuevo
+#Key binding para filtrar
 app.textEntry.focus_set()
 app.textEntry.bind("<F9>", lambda event: app.filterButton.invoke())
+
+
+#Bindings para la cuando se enfoca o desenfoca y ajustar la transparencia
+app.app.bind("<FocusIn>", app.on_focus_fade_in)
+app.app.bind("<FocusOut>", app.on_focus_out)
+
+
+
 
 tk.mainloop()
