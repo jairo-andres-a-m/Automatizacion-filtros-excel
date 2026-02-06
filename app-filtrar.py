@@ -27,6 +27,8 @@ class ConexionExcel():
         self.df = self.ws.range("A1").expand().options(pd.DataFrame, header=1, index=False, numbers=int).value
         self.df = self.df[COLEGIO_COLS]
         self.df = self.df.drop_duplicates()
+        print(self.df)
+        print(self.df.columns)
         self.n_filas = self.ws.range("D1").end("down").row
         print("número de filas", self.n_filas) 
         # print(self.df)
@@ -34,6 +36,9 @@ class ConexionExcel():
     def filtrar_colegio_e_ids(self, colegio, ids):
         self.ws.range("A1").api.AutoFilter(Field=18, Criteria1=colegio, Operator=7)     # filtra el colegio
         self.ws.range("A1").api.AutoFilter(Field=4, Criteria1=ids, Operator=7)          # filtra los ids
+
+        #Crear listbox de opciones de ids
+        app.opciones_ids(mi_excel.df, colegio)
         
     def filtrar_fechas(self, fechas):
         self.ws.range("A1").api.AutoFilter(Field=47, Criteria2=fechas, Operator=7)      # filtra las fechas
@@ -150,10 +155,22 @@ class App():
 
         
         #FRAME DE ABAJO controles adicionales -----------------------------------------------------
-        # self.frame2 = tk.Frame(self.app, bg="white", width=46).grid_propagate(0)    #fondo blanco para diferenciar del frame de arriba
-        # # self.frame2.pack()
+        self.frame2 = tk.Frame(self.app, bg="white", width=46)    #fondo blanco para diferenciar del frame de arriba
+        self.frame2.pack(fill="both", expand=True)
 
 
+    def opciones_ids(self, df, colegio):
+        df_colegio = df[df["Nombre Institución Educativa"] == colegio]
+        print(df_colegio)
+        self.listids = tk.Listbox(self.frame2)
+        ids = list(df_colegio["Id Sitio Entrega"])
+        ids = ["· · · · · "] + ids
+        for item in ids:
+            self.listids.insert(tk.END, item)
+        self.listids.pack(side="left", padx=5, pady=5)
+        self.listids.pack()
+    
+    
     #fade in de la transparencia para cuando se enfoca la ventana
     def on_focus_fade_in(self, event, target_alpha=0.90):
         current_alpha = self.app.attributes('-alpha')
@@ -287,6 +304,8 @@ class App():
 
 mi_excel = ConexionExcel(EXCEL, PESTAÑA)
 app = App(mi_excel)
+
+# app.opciones_ids(mi_excel.df, "COLEGIO BOLIVIA (IED)")
 
 #Key binding para filtrar
 app.textEntry.focus_set()
