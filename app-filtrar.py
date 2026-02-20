@@ -130,6 +130,18 @@ class App():
                                     pady=2)
                                     # indicator=0)
 
+        self.botonids = tk.Button(self.frame1,
+                                    text="▼",
+                                    width= 5,
+                                    highlightthickness=0,
+                                    #command=self.check_findes,
+                                    # variable= self.var_finde,
+                                    # onvalue=  self.var_finde.set(value=1),
+                                    # offvalue= self.var_finde.set(value=0),
+                                    font=("Arial", 5),
+                                    pady=2)
+                                    # indicator=0)
+
 
         self.radioButton_deldia = tk.Radiobutton(self.frame1,
                                                 text="del día",
@@ -148,7 +160,8 @@ class App():
         self.textEntry.pack()
         self.filterButton.pack(side = "left", padx = 6, pady = 1, fill=tk.BOTH)
         self.favanzadoButton.pack(side = "left", padx = 6, pady = 1, fill=tk.BOTH)
-        self.ffindeButton.pack(side = "left", padx = 28, pady = 1)
+        self.ffindeButton.pack(side = "left", padx = 17, pady = 1)
+        self.botonids.pack(side="left", pady = 1)
         self.radioButton_apartir.pack(side = "right", padx = 5, pady = 1)
         self.radioButton_deldia.pack(side = "right", padx = 5, pady = 1)
 
