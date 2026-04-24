@@ -9,7 +9,7 @@ import tkinter as tk
 import re
 
 
-EXCEL = r"C:\Users\PC\Desktop\Base Suministros SIDAE SEPT.xlsx"
+EXCEL = r"C:\Users\PC\Desktop\Suministros_SIDAE_SEPT.xlsx"
 PESTAÑA = "M-GI-06"
 
 COLEGIO_COLS = ['Id Sitio Entrega', 'Nombre Institución Educativa', 'Sitio de Entrega']
@@ -38,6 +38,7 @@ class ConexionExcel():
     def filtrar_fechas(self, fechas):
         self.ws.range("A1").api.AutoFilter(Field=47, Criteria2=fechas, Operator=7)      # filtra las fechas
 
+
     def desfiltrar_fechas(self):
         self.ws.range("A1").api.AutoFilter(Field=47, Operator=7)                        # desfiltra las fechas
 	
@@ -58,7 +59,23 @@ class ConexionExcel():
         else:
             print("\nEspacio de referencia ocupado, revisar.")
             self.n_filas = self.ws.range("D1").end("down").row
+
+    def filas_visibles(self):
+        ultima_fila = self.ws.range("D1").end("down").row
+        rango = self.ws.range(f'D1:D{ultima_fila}')
+        celdas_visibles = rango.api.SpecialCells(12)  # 12 = xlCellTypeVisible
+
+        filas_visibles = []
+        for area in celdas_visibles.Areas:
+            for celda in area.Cells:
+                filas_visibles.append(celda.Row)
+
+        print(filas_visibles[1:])
+        return filas_visibles[1:]
+        
     
+
+
     def filtrarnofindes(self):
         sin_findes = ['LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES']
         self.ws.range("A1").api.AutoFilter(Field=48, Criteria1=sin_findes, Operator=7)
@@ -82,6 +99,10 @@ class App():
         self.app = tk.Tk()
         self.app.title("( :     -     ")
 
+        self.filas_filtradas = None
+        self.suministros = None
+        
+
         self.app.attributes('-topmost', True)
         self.app.attributes('-alpha', 0.85)
 
@@ -96,8 +117,16 @@ class App():
         self.var_exacto = tk.IntVar(self.app)
         self.var_finde = tk.IntVar(self.app)
 
+        self.labelFila = tk.Label(self.frame1, height=6, width=2, anchor="n", fg="darkgrey")
 
-        self.textEntry = tk.Text(self.frame1, height=6, width =46)
+        self.textEntry = tk.Text(self.frame1, height=6, width =48, wrap="none") #width era 48
+
+        self.texto_len_textEntry = 0
+        self.textEntry.bind("<KeyRelease>", self.check_borrado)
+
+        self.escribirButton = tk.Button(self.frame1, text="▼", font=("Arial", 5), 
+                                        width= 2,
+                                        command= lambda: self.escribir_suministros(self.filas_filtradas, self.suministros))
 
         self.filterButton = tk.Button(self.frame1,
                                     text="filtrar",
@@ -139,11 +168,12 @@ class App():
         
 
 
-
+        self.labelFila.pack(side="left", fill="y")
         self.textEntry.pack()
         self.filterButton.pack(side = "left", padx = 6, pady = 1, fill=tk.BOTH)
         self.favanzadoButton.pack(side = "left", padx = 6, pady = 1, fill=tk.BOTH)
-        self.ffindeButton.pack(side = "left", padx = 28, pady = 1)
+        self.escribirButton.pack(side = "left", padx = 16, pady = 1)
+        self.ffindeButton.pack(side = "left", padx = 9, pady = 1)
         self.radioButton_apartir.pack(side = "right", padx = 5, pady = 1)
         self.radioButton_deldia.pack(side = "right", padx = 5, pady = 1)
 
@@ -167,6 +197,16 @@ class App():
     def on_focus_out(self, event):
         self.app.attributes('-alpha', 0.47)
 
+    def check_borrado(self, event=None):
+        if self.texto_len_textEntry == 0:
+            return
+        actual = len(self.textEntry.get("1.0", "end-1c"))
+        if actual <= self.texto_len_textEntry * 0.98:
+            self.labelFila.config(text="")   # o lo que quieras mostrar acá
+            self.texto_len_textEntry = 0    # resetea para no dispararse repetidamente
+            self.filas_filtradas = None
+            self.suministros = None
+
     
 
    #CHECKEO PARAMETROS para filtrar ---------------------------------------------------------------
@@ -184,6 +224,11 @@ class App():
         elif self.var_dias.get() == "apartir":
             self.mi_excel.filtrar_colegio_e_ids(colegio, ids)
             self.mi_excel.desfiltrar_fechas()
+        
+        self.filas_filtradas = self.mi_excel.filas_visibles()
+        self.labelFila.config(text="\n".join(str(f)[-3:] for f in self.filas_filtradas))
+
+        
 
 
     def check_filtrar_exacto(self):
@@ -195,6 +240,9 @@ class App():
             self.mi_excel.filtrar_avanzado(filas, self.var_dias.get())
         elif self.var_dias.get() == "apartir":
             self.mi_excel.filtrar_avanzado(filas, self.var_dias.get())
+            
+        self.filas_filtradas = self.mi_excel.filas_visibles()
+        self.labelFila.config(text="\n".join(str(f)[-3:] for f in self.filas_filtradas))
 
 
     def check_findes(self):
@@ -205,6 +253,7 @@ class App():
         elif self.var_finde.get() == 1:
             self.mi_excel.desfiltrarnofindes()
             self.var_finde.set(0)
+        
 
 
     def extraer_datos(self):
@@ -213,6 +262,7 @@ class App():
         colegio = self.extraer_colegio(texto, ids)
         fechas = self.extraer_fechas(texto)
         filas = self.extraer_filas(texto)
+        suministros = self.extraer_suministros(texto)
 
         #Imprimir Parametros
         print("")
@@ -227,12 +277,29 @@ class App():
         for fila in filas[1:]:
             print("         ",fila) 
         
+        self.texto_len_textEntry = len(texto)
+        
+        self.suministros = suministros
+
         return ids,colegio,fechas,filas
+
+    def escribir_suministros(self, filas_filtradas, suministros):
+        try:
+            if len(filas_filtradas) == len(suministros):
+                print()
+                print("Escribiendo suministros", suministros, "en", filas_filtradas, "\n")
+                n = 0
+                for fila in filas_filtradas:
+                    self.mi_excel.ws.range(f"AL{fila}").value = suministros[n]
+                    n += 1
+        except TypeError:
+            print("None en suministros y/o filas.")
 
         
 
     #UTILIDADES app -------------------------------------------------------------------------------
 
+    
     def extraer_ids(self, texto):
         patron_ids = r"\d{5}"
         ids = []
@@ -256,6 +323,21 @@ class App():
         fechas = self.ajustar_fechas(fechas) #ajusta las fechas a una lista de tuples (2, fecha) para excel
         # print(fechas)
         return fechas
+    
+    def extraer_suministros(self, texto):
+        patron_suministros = r"\d{1,3} \d{1,3} \d{1,3} \d{1,3} \d{1,4}"
+        suministros = []
+        suministros = re.findall(patron_suministros, texto)
+        suministros_organizados = []
+        for i in suministros:
+            print(i)
+            tipo_abcd = i.split(" ")
+            tipo_abcd = tipo_abcd[:-1]
+            suministros_organizados.append(tipo_abcd)
+
+        print(suministros_organizados)
+        return suministros_organizados
+        
 
     def ajustar_fechas(self, fechas):
         """Convierte las fechas a tuplas de fechas para excel (2, fecha1, 2, fecha2, 2, fecha3, ...)"""
@@ -282,6 +364,11 @@ class App():
         # print(filas)
 
         return filas
+    
+
+    
+            
+
 
    
 
