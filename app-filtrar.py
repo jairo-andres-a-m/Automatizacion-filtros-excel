@@ -9,7 +9,7 @@ import tkinter as tk
 import re
 
 
-EXCEL = r"C:\Users\PC\Desktop\Suministros_SIDAE_SEPT.xlsx"
+EXCEL = r"C:\Users\PC\Proy-Codigo\Automatizacion-filtros-excel\202605M-GI-06 SIDAE.xlsx"
 PESTAÑA = "M-GI-06"
 
 COLEGIO_COLS = ['Id Sitio Entrega', 'Nombre Institución Educativa', 'Sitio de Entrega']
@@ -60,18 +60,42 @@ class ConexionExcel():
             print("\nEspacio de referencia ocupado, revisar.")
             self.n_filas = self.ws.range("D1").end("down").row
 
-    def filas_visibles(self):
+    def filas_visibles(self, texto):
         ultima_fila = self.ws.range("D1").end("down").row
         rango = self.ws.range(f'D1:D{ultima_fila}')
         celdas_visibles = rango.api.SpecialCells(12)  # 12 = xlCellTypeVisible
+
+        patron_ids = r"\d{5}"
+        ids = re.findall(patron_ids, texto)
 
         filas_visibles = []
         for area in celdas_visibles.Areas:
             for celda in area.Cells:
                 filas_visibles.append(celda.Row)
+        
+        ids_visibles_en_filas = []
+        for id in ids:
+            id = int(id)
+            if self.df["Id Sitio Entrega"].isin([id]).any():
+                ids_visibles_en_filas.append(id)
+            else:
+                ids_visibles_en_filas.append("-")
+
+        filas_visibles_todas = []
+        n = 1
+        for i in ids_visibles_en_filas:
+            if i == "-":
+                filas_visibles_todas.append("-")
+            else:
+                filas_visibles_todas.append(filas_visibles[n])
+                n += 1
+
+
 
         print(filas_visibles[1:])
-        return filas_visibles[1:]
+        print(ids_visibles_en_filas)
+        print(filas_visibles_todas)
+        return filas_visibles[1:], ids_visibles_en_filas, filas_visibles_todas
         
     
 
@@ -126,7 +150,7 @@ class App():
 
         self.escribirButton = tk.Button(self.frame1, text="▼", font=("Arial", 5), 
                                         width= 2,
-                                        command= lambda: self.escribir_suministros(self.filas_filtradas, self.suministros))
+                                        command= lambda: self.escribir_suministros(self.filas_filtradas, self.suministros))  #aca se usa el primer item de filas filtradas
 
         self.filterButton = tk.Button(self.frame1,
                                     text="filtrar",
@@ -185,7 +209,7 @@ class App():
 
 
     #fade in de la transparencia para cuando se enfoca la ventana
-    def on_focus_fade_in(self, event, target_alpha=0.90):
+    def on_focus_fade_in(self, event, target_alpha=1):
         current_alpha = self.app.attributes('-alpha')
         if current_alpha < target_alpha:
             current_alpha += 0.05  # Velocidad del desvanecido
@@ -225,8 +249,9 @@ class App():
             self.mi_excel.filtrar_colegio_e_ids(colegio, ids)
             self.mi_excel.desfiltrar_fechas()
         
-        self.filas_filtradas = self.mi_excel.filas_visibles()
-        self.labelFila.config(text="\n".join(str(f)[-3:] for f in self.filas_filtradas))
+        self.filas_filtradas = self.mi_excel.filas_visibles(self.textEntry.get("1.0",'end-1c'))
+        print("filas visibles", self.filas_filtradas)
+        self.labelFila.config(text="\n".join(str(f)[-3:] for f in self.filas_filtradas[2]))     #para el label se usa el tercer item de filas_filtradas
 
         
 
@@ -241,8 +266,8 @@ class App():
         elif self.var_dias.get() == "apartir":
             self.mi_excel.filtrar_avanzado(filas, self.var_dias.get())
             
-        self.filas_filtradas = self.mi_excel.filas_visibles()
-        self.labelFila.config(text="\n".join(str(f)[-3:] for f in self.filas_filtradas))
+        self.filas_filtradas = self.mi_excel.filas_visibles(self.textEntry.get("1.0",'end-1c'))
+        self.labelFila.config(text="\n".join(str(f)[-3:] for f in self.filas_filtradas[2]))     #para el label se usa el segundo item de filas filtradas
 
 
     def check_findes(self):
@@ -284,16 +309,20 @@ class App():
         return ids,colegio,fechas,filas
 
     def escribir_suministros(self, filas_filtradas, suministros):
-        try:
-            if len(filas_filtradas) == len(suministros):
-                print()
-                print("Escribiendo suministros", suministros, "en", filas_filtradas, "\n")
-                n = 0
-                for fila in filas_filtradas:
-                    self.mi_excel.ws.range(f"AL{fila}").value = suministros[n]
-                    n += 1
-        except TypeError:
-            print("None en suministros y/o filas.")
+        print(filas_filtradas)
+        print(suministros)
+        if len(filas_filtradas[1]) == len(suministros):
+            print()
+            print("Escribiendo suministros", suministros, "en", filas_filtradas, "\n")
+            filas_suministros = zip(filas_filtradas[2], suministros)
+            print(filas_suministros)
+            for fila, sumin in filas_suministros:
+                print(fila, sumin)
+                if fila != "-":
+                    self.mi_excel.ws.range(f"AL{fila}").value = sumin
+
+        else:
+            print("Numero de elementos en suministros y filas es diferente.")
 
         
 
