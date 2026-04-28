@@ -60,7 +60,7 @@ class ConexionExcel():
             print("\nEspacio de referencia ocupado, revisar.")
             self.n_filas = self.ws.range("D1").end("down").row
 
-    def filas_visibles(self, texto):
+    def hallar_correspondencia_filas(self, texto):
         ultima_fila = self.ws.range("D1").end("down").row
         rango = self.ws.range(f'D1:D{ultima_fila}')
         celdas_visibles = rango.api.SpecialCells(12)  # 12 = xlCellTypeVisible
@@ -68,34 +68,30 @@ class ConexionExcel():
         patron_ids = r"\d{5}"
         ids = re.findall(patron_ids, texto)
 
-        filas_visibles = []
+        filas_excel = []
         for area in celdas_visibles.Areas:
             for celda in area.Cells:
-                filas_visibles.append(celda.Row)
+                filas_excel.append(celda.Row)
         
-        ids_visibles_en_filas = []
+        correspondencia_con_ids = []
         for id in ids:
             id = int(id)
             if self.df["Id Sitio Entrega"].isin([id]).any():
-                ids_visibles_en_filas.append(id)
+                correspondencia_con_ids.append(id)
             else:
-                ids_visibles_en_filas.append("-")
+                correspondencia_con_ids.append("-")
 
-        filas_visibles_todas = []
+        correspondencia_filas_texto_filas_excel = []
         n = 1
-        for i in ids_visibles_en_filas:
+        for i in correspondencia_con_ids:
             if i == "-":
-                filas_visibles_todas.append("-")
+                correspondencia_filas_texto_filas_excel.append("-")
             else:
-                filas_visibles_todas.append(filas_visibles[n])
+                correspondencia_filas_texto_filas_excel.append(filas_excel[n])
                 n += 1
 
-
-
-        print(filas_visibles[1:])
-        print(ids_visibles_en_filas)
-        print(filas_visibles_todas)
-        return filas_visibles[1:], ids_visibles_en_filas, filas_visibles_todas
+        #filas_visibles son las filas del filtro. ids_en_texto son los ids en el cuadro de texto y correspondencia_filas_id_texto es si tienen fila correspondiente o no.
+        return filas_excel[1:], correspondencia_filas_texto_filas_excel
         
     
 
@@ -123,7 +119,7 @@ class App():
         self.app = tk.Tk()
         self.app.title("( :     -     ")
 
-        self.filas_filtradas = None
+        self.correspoindencia_filas = None
         self.suministros = None
         
 
@@ -141,7 +137,7 @@ class App():
         self.var_exacto = tk.IntVar(self.app)
         self.var_finde = tk.IntVar(self.app)
 
-        self.labelFila = tk.Label(self.frame1, height=6, width=2, anchor="n", fg="darkgrey")
+        self.labelFila = tk.Label(self.frame1, height=6, width=2, anchor="n", fg="darkgrey", font=("TkTextFont",10))
 
         self.textEntry = tk.Text(self.frame1, height=6, width =48, wrap="none") #width era 48
 
@@ -150,7 +146,7 @@ class App():
 
         self.escribirButton = tk.Button(self.frame1, text="▼", font=("Arial", 5), 
                                         width= 2,
-                                        command= lambda: self.escribir_suministros(self.filas_filtradas, self.suministros))  #aca se usa el primer item de filas filtradas
+                                        command= lambda: self.escribir_suministros(self.correspondencia_filas, self.suministros))
 
         self.filterButton = tk.Button(self.frame1,
                                     text="filtrar",
@@ -228,7 +224,7 @@ class App():
         if actual <= self.texto_len_textEntry * 0.98:
             self.labelFila.config(text="")   # o lo que quieras mostrar acá
             self.texto_len_textEntry = 0    # resetea para no dispararse repetidamente
-            self.filas_filtradas = None
+            self.correspondencia_filas = None
             self.suministros = None
 
     
@@ -249,9 +245,9 @@ class App():
             self.mi_excel.filtrar_colegio_e_ids(colegio, ids)
             self.mi_excel.desfiltrar_fechas()
         
-        self.filas_filtradas = self.mi_excel.filas_visibles(self.textEntry.get("1.0",'end-1c'))
-        print("filas visibles", self.filas_filtradas)
-        self.labelFila.config(text="\n".join(str(f)[-3:] for f in self.filas_filtradas[2]))     #para el label se usa el tercer item de filas_filtradas
+        self.correspondencia_filas = self.mi_excel.hallar_correspondencia_filas(self.textEntry.get("1.0",'end-1c'))
+        print("filas_excel, correspondencia_filas_texto_filas_excel", self.correspondencia_filas)
+        self.labelFila.config(text="\n".join(str(f)[-3:] for f in self.correspondencia_filas[1]))     #para el label se usa el segundo item de correspondencia_filas
 
         
 
@@ -266,8 +262,9 @@ class App():
         elif self.var_dias.get() == "apartir":
             self.mi_excel.filtrar_avanzado(filas, self.var_dias.get())
             
-        self.filas_filtradas = self.mi_excel.filas_visibles(self.textEntry.get("1.0",'end-1c'))
-        self.labelFila.config(text="\n".join(str(f)[-3:] for f in self.filas_filtradas[2]))     #para el label se usa el segundo item de filas filtradas
+        self.correspondencia_filas = self.mi_excel.hallar_correspondencia_filas(self.textEntry.get("1.0",'end-1c'))
+        print("filas visibles, correspondencia_filas_id_texto", self.correspondencia_filas)
+        self.labelFila.config(text="\n".join(str(f)[-3:] for f in self.correspondencia_filas[1]))     #para el label se usa el segundo item de filas filtradas
 
 
     def check_findes(self):
@@ -308,16 +305,20 @@ class App():
 
         return ids,colegio,fechas,filas
 
-    def escribir_suministros(self, filas_filtradas, suministros):
-        print(filas_filtradas)
-        print(suministros)
-        if len(filas_filtradas[1]) == len(suministros):
+    def escribir_suministros(self, correspondencia_filas, suministros):
+
+        filas_a_escribir = list(filter(lambda x: x != "-", correspondencia_filas[1]))
+        
+        print(len(correspondencia_filas[0]), " ", len(filas_a_escribir), " ", len(correspondencia_filas[0]) == len(filas_a_escribir))
+        
+        if len(correspondencia_filas[0]) == len(filas_a_escribir):
             print()
-            print("Escribiendo suministros", suministros, "en", filas_filtradas, "\n")
-            filas_suministros = zip(filas_filtradas[2], suministros)
-            print(filas_suministros)
+            print("Escribiendo suministros")
+            print(suministros)
+            print("en")
+            print(correspondencia_filas)
+            filas_suministros = zip(correspondencia_filas[1], suministros)
             for fila, sumin in filas_suministros:
-                print(fila, sumin)
                 if fila != "-":
                     self.mi_excel.ws.range(f"AL{fila}").value = sumin
 
